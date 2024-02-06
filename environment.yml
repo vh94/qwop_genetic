@@ -1,0 +1,9 @@
+name: qwop
+channels:
+  - defaults
+dependencies:
+  - python=3.8  
+  - selenium=4.9.0
+  - matplotlib
+  - numpy
+  - pytesseract=0.3.13
