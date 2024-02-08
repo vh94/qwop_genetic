@@ -1,79 +1,59 @@
 import sys
-
-from selenium.webdriver.common.actions import action_builder
 sys.path.append('./src/')
+from selenium.webdriver.common.actions import action_builder
 import pytesseract
+from time import sleep
+from statistics import mean, median
 from PIL import Image, ImageOps
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
-from MethodChainFactroy import MethodChainFactory, GeneChain
-from CreateGenome import create_Genome
+from MethodChainFactroy import *
+from CreateGenome import create_Genome, create_population
+
+
+# Setup tesseract OCR engine
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+tess_conf = '--psm 7 -c page_separator=''' 
+
 # Spawn Firefox WebDriver 
 driver = webdriver.Firefox()
 
 # access QWOP url:
 driver.get("http://www.foddy.net/Athletics.html")
-
+sleep(30)
 # target game canvas
 game_canvas = driver.find_element(By.CSS_SELECTOR,'#window1')
 
-## Gameplay logic ##
 # right click to initialize game:
 ActionChains(driver).click(game_canvas).perform()
 
-# Spacebar or r to restart
-ActionChains(driver)\
-    .key_up('q')\
-    .key_up('w')\
-    .key_up('o')\
-    .key_up('p')\
-    .send_keys('r')\
-    .perform()
+### Inizialization done !
 
 
-## create a genome
-
-genome = create_Genome(30)
-
-# perform the genome
-GeneChain(genome,ActionChains(driver)).perform()
-
-
-
-
-## OCR of score ##
-
-# capture image:
-game_canvas.screenshot('./data/img/foo.png') # write to data/img
-
-# IMPROVE: not read and write image but access from ram, ie:
-# snap = game_canvas.screenshot_as_png 
-
-# Setup tesseract OCR engine
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
-tess_conf = '--psm 7 -c page_separator='''
-
-# clean the image 
-img = Image.open('./data/img/foo.png')
-roi = (240, 20, 295, 55) # (l,t,r,b) COULD BUG if double digit score might never happen and cant test, because qwop too hard ...
-img_cropped = img.crop(roi)
-img_bw = ImageOps.grayscale(img_cropped)
-img_in = ImageOps.invert(img_bw)
-
-# extract & store score as float
-score = pytesseract.image_to_string(img_in,config=tess_conf)
-score = float(score.replace('\n',''))
-print("score is:",score)
-# save cropped image for qc
-img_in.save('QWOP/data/img/foo_cropped_in.png')
+## Gameplay logic ##
+Population_id = 'A'
+Generation_id = '1'
+N = 10 # number of Individuals / population size
+n_genes = 30 # number of Genes / genome size
+n_trials = 10 # number of game trial per Individual
+game_duration = 15 # time in seconds per game 
 
 
+Population = create_population(N,n_genes)
+scores = []
+for i,Individual in enumerate(Population):
 
-
-
-
-
+    Individual_ID = f'{Population_id}_{Generation_id}_{i}'
+    key_presses = GeneChain(Individual,ActionChains(driver))
+    score = []
+    # run!
+    for trial in range(n_trials):
+        key_presses.perform()
+        sleep(game_duration)
+        score.append(read_score(Individual_ID,trial,game_canvas))
+        restart_game(driver)
+    scores[i] = [ f(score) for f in [min,mean,median,max] ]
 
 
 # Close the browser window when done
