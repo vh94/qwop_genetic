@@ -6,51 +6,50 @@ from gamecontrols import * # sets up browser etc
 ### Inizialization done !
 
 ####### Gameplay logic ##################
-
+# Initial Random population
+seed(1234)
+Population = create_population(N = 200,n_genes = 20)
 # right click to initialize game:
 ActionChains(driver).click(game_canvas).perform()
-Population = create_population(N = 20,n_genes = 25)
-# run Trials
-fitness = Trials(
-    Population,
-    Pop_ID = 'A',
-    Gen_ID = '1',
-    n_trials = 3,
-    game_duration = 3,
-    write = False
+ 
+for Generation in range(10):
+    print(f'-----\nTraining Gen: {Generation}; N:{len(Population)} \n -----')
+    # run Trials
+    fitness = Trials(
+        Population,
+        Pop_ID = 'A',
+        Gen_ID = Generation,
+        n_trials = 1 + Generation,
+        game_duration = 1 + Generation,
+        write = True
 )
+    print(f'Fitness: \n -----\nHighest: {max(fitness)}\nAvg: {mean(fitness)}')
+    ## Selection
+    TopTen = select_top_N(Population,fitness,30 - (Generation*2))
 
-## Selection
-# rank based on fitness
-# get the ten highest ranked Individuals 
+    ### Recombination
+    # get similarty scores lievenstein distace between them
+    # and store in matrix
 
-TopTen = select_top_N(Population,fitness,10)
+    distsMat = np.empty((len(TopTen),len(TopTen)))
 
-### Recombination
-# get similarty scores lievenstein distace between them
-# and store in matrix
+    for i,genome in enumerate(TopTen):
+        distsMat[i,i:] = [levenshtein_distance(genome,g2) for g2 in TopTen[i:]]
+        
+    distsMat[np.tril_indices_from(distsMat)] = np.inf
+    min_indices = np.argmin(distsMat,axis=1)[:int((len(TopTen)/2)//1) ]
 
-distsMat = np.empty((len(TopTen),len(TopTen)))
+    # recombine_genomes
 
+    Population = [mutate_genome_pauses(genome) for genome in TopTen]
 
-for i,genome in enumerate(TopTen):
-    distsMat[i,i:] = [levenshtein_distance(genome,g2) for g2 in TopTen[i:]]
-    
-distsMat
-np.tril(distsMat)+1
+    for i,j in enumerate(min_indices):
 
-# recombine_genomes
+        Population += [ recombine_genomes(TopTen[i],TopTen[j]) ]
+        Population += [ recombine_genomes(TopTen[i],TopTen[j],shuffle=True) ]
+        Population += [ mutate_genome(TopTen[i],1) ] 
+        Population += [ mutate_genome_pauses(TopTen[i]) ] 
 
-
-
-### Mutation
-
-
-### Migration new Individuals
-
-## next gen:
-
-# top ten old gen + Offspring + Top 10 old gen mutated + Offspring mutated + rest : new Individuals
 
 # Close the browser window when done
 driver.quit()

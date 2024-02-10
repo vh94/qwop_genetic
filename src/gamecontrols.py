@@ -62,13 +62,16 @@ def read_score(Individual_ID,trial):
     returns the score as a float.
     '''
     #global game_canvas
-    game_canvas.screenshot(f'./data/img/{Individual_ID}_{trial}.png') # write to data/img
+    #game_canvas.screenshot(f'./data/img/{Individual_ID}_{trial}.png') # write to data/img
+
+    game_canvas.screenshot(f'./data/img/tmp.png') # write to data/img
 
     # IMPROVE: not read and write image but access from ram, ie:
     # snap = game_canvas.screenshot_as_png 
 
     # Preprocess the image crop:  (l,t,r,b) 
-    img = Image.open(f'./data/img/{Individual_ID}_{trial}.png')
+    #img = Image.open(f'./data/img/{Individual_ID}_{trial}.png')
+    img = Image.open(f'./data/img/tmp.png')
     img_bw = ImageOps.grayscale(img)
     img_in = ImageOps.invert(img_bw)
 
@@ -86,7 +89,7 @@ def read_score(Individual_ID,trial):
     try:
         participant = pytesseract.image_to_string(img_in.crop((200, 110, 430, 140)),config=tess_conf)
         if participant == 'PARTICIPANT\n':
-            score -= 2
+            score -= 1.0
     except:
         print("could not determine if fell down")
 
@@ -121,7 +124,7 @@ def Trials(Population, Pop_ID, Gen_ID, n_trials=3, game_duration=3,write=False):
         data = [datetime.now().strftime('%m-%d-%H-%M-%S'),
                 game_duration,
                 Individual_ID]\
-                + [ f(score) for f in [min,mean,median,max]]
+                + [ round(f(score),5) for f in [min,mean,median,max]]
         
         if write:
             # write to csv file

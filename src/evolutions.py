@@ -5,7 +5,7 @@
 from itertools import combinations
 # from os import sendfile
 import scipy.stats as stats
-from random import sample, random
+from random import sample, random, uniform
 #from selenium.webdriver.common.action_chains import ActionChains
 
 keys = ['q','w','o','p'] # possible keys
@@ -39,7 +39,7 @@ def select_top_N(population,fitness,N):
     # rank fitness list
     rank = stats.rankdata(fitness)
     # zip , sort based on rank and return 0 index
-    pop_ranked = [ _[0] for _ in  sorted(list(zip(population,rank)),key = lambda x: x[1])]
+    pop_ranked = [ _[0] for _ in  sorted(list(zip(population,rank)),key = lambda x: -x[1])]
     return pop_ranked[:N] 
 
 # I use Leventhein here as an distance metric since it incorporates 
@@ -90,10 +90,10 @@ def meiose(genome):
 
 # Note sample fucntion reshuffles,
 # thus i should say for gene in genome....
-def recombine_genomes(genome1,genome2,n_genes,shuffle=False):
+def recombine_genomes(genome1,genome2,shuffle=False):
 
     if shuffle:
-        return sample(genome1+genome2,n_genes)
+        return sample(genome1+genome2,len(genome1))
     else:
         gamet1 = meiose(genome1)
         gamet2 = meiose(genome2)
@@ -109,11 +109,18 @@ def mutate_genome(genome,prob):
     # deletions 
     size = len(genome)
     mutated = create_genome(int((size*prob) // 1))
-    return recombine_genomes(genome,mutated,size)
+    return recombine_genomes(genome,mutated)
 
 
 
+def mutate_genome_pauses(genome):
+    for gene in genome:
 
+        if gene[1] == 'pause':
+            
+            gene[1] = max(0,gene[1] + round(uniform(-.5,.5),5)) 
 
+    
+    return genome
 
 
