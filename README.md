@@ -2,9 +2,18 @@
 
 ## Goal:
 
+Train an evoultionary Algortihm to play the browser based online Game 'QWOP' (Foddy).
+
 
 ## Dependencies:
 
- - mozilla-firefox ()
- ???- firefox-geckodriver to allow selenium to interact with firefox 
+#### System Dependencies
+
+ - mozilla-firefox (or chrome based browser)
+ - tesseract OCR engine
+
+#### Python Dependencies
+
+All 🐍 - dependencies are listed in the conda environment file: 'environment.yml'
+
 
