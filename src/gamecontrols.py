@@ -5,6 +5,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
+from datetime import datetime
+import csv
+from statistics import mean, median
 # Setup tesseract OCR engine
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
 tess_conf = '--psm 7 -c page_separator=''' 
@@ -39,16 +42,17 @@ def GeneChain(genome):
             - 'argument' : list of arguments (one per instruction)
     Output: chained function constructor arg object of type selenium.ActionChains
     '''
+    chain = ActionChains(driver)
     for gene in genome:
-        fun = getattr(type(ActionChains(driver)),gene[0])
+        fun = getattr(type(chain),gene[0])
         # note: key_down and key_up only accept single keys as input
         if gene[0] != 'pause':
             for key in gene[1]:
-                actions = fun(actions,key)
+                chain = fun(chain,key)
         else:
-            actions = fun(actions,gene[1])
+            chain = fun(chain,gene[1])
 
-    return actions
+    return chain
 
 
 def read_score(Individual_ID,trial):
@@ -63,24 +67,69 @@ def read_score(Individual_ID,trial):
     # IMPROVE: not read and write image but access from ram, ie:
     # snap = game_canvas.screenshot_as_png 
 
-    # Preprocess the image 
+    # Preprocess the image crop:  (l,t,r,b) 
     img = Image.open(f'./data/img/{Individual_ID}_{trial}.png')
-    roi = (240, 20, 295, 55) # (l,t,r,b) COULD BUG if double digit, cant test because qwop too hard ...
-    img_cropped = img.crop(roi)
-    img_bw = ImageOps.grayscale(img_cropped)
+    img_bw = ImageOps.grayscale(img)
     img_in = ImageOps.invert(img_bw)
 
     # save cropped image for qc
-    img_in.save(f'./data/img/{Individual_ID}_{trial}_cropped.png')
+    #img_in.save(f'./data/img/{Individual_ID}_{trial}_cropped.png')
     try:
         # extract & store score as float
-        score = pytesseract.image_to_string(img_in,config=tess_conf)
-        score = float(score.replace('\n',''))
+        score = pytesseract.image_to_string(img_in.crop((230, 20, 420, 55)),config=tess_conf)
+        score = float(score.replace(' metres\n',''))
+
     except:
         print("score couldn't be read, setting 0")
         score = 0
+    
+    try:
+        participant = pytesseract.image_to_string(img_in.crop((200, 110, 430, 140)),config=tess_conf)
+        if participant == 'PARTICIPANT\n':
+            score -= 2
+    except:
+        print("could not determine if fell down")
 
     return score
 
 
+
+def Trials(Population, Pop_ID, Gen_ID, n_trials=3, game_duration=3,write=False):
+
+    fitness = []
+    # Iterate of Population:
+    for i,Genome in enumerate(Population):
+        
+        # concatenate ID of individual 
+        Individual_ID = f'{Pop_ID}_{Gen_ID}_{i}'
+        score = [] # list to store meters 
+        # run n number of trials!
+        for trial in range(n_trials):
+            restart_game()
+            # Perform the steps , ie gene expression -> pheno 
+            GeneChain(Genome).perform()
+            # Pause to limit trial duration
+            sleep(game_duration)
+            # read the score from game canvas and append to score list
+            score.append(read_score(Individual_ID,trial))
+            # next trial
+         
+        # append maximal reached score to fitness list
+        fitness.append(max(score))
+
+        # parse data to write to logging csv column
+        data = [datetime.now().strftime('%m-%d-%H-%M-%S'),
+                game_duration,
+                Individual_ID]\
+                + [ f(score) for f in [min,mean,median,max]]
+        
+        if write:
+            # write to csv file
+            with open('./data/fitness.csv','a',newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(data)
+
+        print(data) # print to stdout
+
+    return fitness
 

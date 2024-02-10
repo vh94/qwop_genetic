@@ -1,63 +1,26 @@
 import sys
 sys.path.append('./src/')
-from datetime import datetime
-import csv
-from statistics import mean, median
 import numpy as np
-############### OWN MODULES 
-from gamecontrols import * # sets up browser etc
 from evolutions import *
+from gamecontrols import * # sets up browser etc
 ### Inizialization done !
 
-############################# Gameplay logic ##################################
-Population_id = 'A'
-Generation_id = '1'
-N = 5 # number of Individuals / population size
-n_genes = 25 # number of Genes / genome size
-n_trials = 2 # number of game trial per Individual
-game_duration = 3 # time in seconds per game 
+####### Gameplay logic ##################
 
-
-Population = create_population(N,n_genes)
-fitness = []
-# perform the runs:
 # right click to initialize game:
 ActionChains(driver).click(game_canvas).perform()
+Population = create_population(N = 20,n_genes = 25)
+# run Trials
+fitness = Trials(
+    Population,
+    Pop_ID = 'A',
+    Gen_ID = '1',
+    n_trials = 3,
+    game_duration = 3,
+    write = False
+)
 
-
-for i,Genome in enumerate(Population):
-    
-    # concatenate ID of individual 
-    Individual_ID = f'{Population_id}_{Generation_id}_{i}'
-    score = [] # list to store meters 
-    # run!
-    for trial in range(n_trials):
-        restart_game()
-        # Perform the steps , ie gene expression -> pheno 
-        GeneChain(Genome).perform()
-        # Pause to limit trial duration
-        sleep(game_duration)
-        # read the score from game canvas and append to score list
-        score.append(read_score(Individual_ID,trial))
-        # next trial
-     
-    # append maximal reached score to fitness list
-    fitness.append(max(score))
-    # parse data to write to logging csv column
-    data = [datetime.now().strftime('%m-%d-%H-%M-%S'),
-            game_duration,
-            Individual_ID]\
-            + [ f(score) for f in [min,mean,median,max]]
-    
-    # write to csv file
-    with open('./data/fitness.csv','a',newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(data)
-
-    print(data) # print to stdout
-
-
-### Selection
+## Selection
 # rank based on fitness
 # get the ten highest ranked Individuals 
 
