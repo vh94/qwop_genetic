@@ -19,13 +19,13 @@ for Generation in range(10):
         Population,
         Pop_ID = 'A',
         Gen_ID = Generation,
-        n_trials = 1 + Generation,
-        game_duration = 1 + Generation,
+        n_trials = min(5,(1 + Generation)),
+        game_duration = min(15, (1 + Generation)),
         write = True
 )
     print(f'Fitness: \n -----\nHighest: {max(fitness)}\nAvg: {mean(fitness)}')
     ## Selection
-    TopTen = select_top_N(Population,fitness,30 - (Generation*2))
+    TopTen = select_top_N(Population,fitness,35 - (Generation*2))
 
     ### Recombination
     # get similarty scores lievenstein distace between them
@@ -37,6 +37,7 @@ for Generation in range(10):
         distsMat[i,i:] = [levenshtein_distance(genome,g2) for g2 in TopTen[i:]]
         
     distsMat[np.tril_indices_from(distsMat)] = np.inf
+    # maybe add more min_indices
     min_indices = np.argmin(distsMat,axis=1)[:int((len(TopTen)/2)//1) ]
 
     # recombine_genomes
@@ -46,8 +47,8 @@ for Generation in range(10):
     for i,j in enumerate(min_indices):
 
         Population += [ recombine_genomes(TopTen[i],TopTen[j]) ]
-        Population += [ recombine_genomes(TopTen[i],TopTen[j],shuffle=True) ]
-        Population += [ mutate_genome(TopTen[i],1) ] 
+        Population += [ recombine_genomes(TopTen[i],TopTen[j]) ]
+        Population += [ mutate_genome(TopTen[i],0.5) ] 
         Population += [ mutate_genome_pauses(TopTen[i]) ] 
 
 
