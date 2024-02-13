@@ -87,9 +87,10 @@ def read_score(Individual_ID,trial,game_canvas,Pop_ID):
 
 
 
-def Trials(Population, Pop_ID, Gen_ID,driver,game_canvas,n_trials=3, game_duration=3,write=False):
+def Trials(Population, Pop_ID, Gen_ID,driver,game_canvas,n_trials,game_duration,N_generations,write=False):
     # Iterate over Population:
-    # global N_generations
+    #global N_generations
+    
     for i,Genome in enumerate(Population):
         
         if not i: print('\n\n'); fitness = [0] # edge case for printing--:

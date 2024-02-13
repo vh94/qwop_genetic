@@ -12,7 +12,7 @@ keys = ['q','w','o','p'] # possible keys
 combs = [''.join(i) for n in range(1,5) for i in combinations(keys,n)]
 
 
-def create_genome(n_genes):
+def create_genome_old(n_genes):
     genome = [None]*n_genes
     
     for gene in range(n_genes):
@@ -27,6 +27,23 @@ def create_genome(n_genes):
         genome[gene] = [ action, argument ]
 
     return genome
+
+
+def create_genome(n_genes):
+
+    genome = []
+
+    for gene in range(n_genes):
+        
+        keys = ''.join(sample(combs,1)) 
+        duration = round(random()*2,5)
+        
+        genome += [['key_down',keys]]
+        genome += [['pause', duration]]
+        genome += [['key_up', keys]]
+
+    return genome
+
 
 def create_population(N,n_genes):
     return [create_genome(n_genes) for i in range(N)] 

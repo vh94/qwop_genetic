@@ -10,10 +10,20 @@ from config import *
 from gamecontrols import *
 from evolutions import *
 
-def main(driver,game_canvas):
+def main(driver,game_canvas, args):
 
+    Popsize = args.pop
+    N_genes = args.genes
+    N_generations = args.gen
+    Pop_id = args.id
+    n_trials = args.trials
+    game_duration = args.duration
+    top_N = args.top
+    seed_nr = args.seed
     # Initial Random population
     seed(seed_nr)
+    
+
     Population = create_population(Popsize,N_genes)
 
 
@@ -27,7 +37,8 @@ def main(driver,game_canvas):
             driver= driver,
             game_canvas= game_canvas,
             n_trials = n_trials,
-            game_duration = min(35, (game_duration + 0.5*Generation)),
+            game_duration = game_duration, #min(80, (game_duration + 0.5*Generation)),
+            N_generations= N_generations,
             write = True)
 
         ###  Selection
@@ -63,14 +74,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     # , , , , , , , top_N = args[1:]
-    Popsize = args.pop
-    N_genes = args.genes
-    N_generations = args.gen
-    Pop_id = args.id
-    n_trials = args.trials
-    game_duration = args.duration
-    top_N = args.top
-    seed_nr = args.seed
 
     # Spawn Firefox WebDriver 
     driver = webdriver.Firefox()
@@ -81,7 +84,7 @@ if __name__ == '__main__':
     # right click to initialize game:
     ActionChains(driver).click(game_canvas).perform()
     # execute main function:    
-    main(driver, game_canvas)
+    main(driver, game_canvas, args)
     # Close the browser window when done
     driver.quit()
 
