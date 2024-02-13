@@ -1,26 +1,15 @@
 # This file contains game control fucntions:
 import pytesseract
 from PIL import Image, ImageOps
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 from datetime import datetime
 import csv
 from statistics import mean, median
-# Setup tesseract OCR engine
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
-tess_conf = '--psm 7 -c page_separator=''' 
-# Spawn Firefox WebDriver 
-driver = webdriver.Firefox()
-# access QWOP url:
-driver.get("http://www.foddy.net/Athletics.html")
-# target game canvas
-sleep(3)
-game_canvas = driver.find_element(By.CSS_SELECTOR,'#window1')
+from config import *
+############## Functions ##################
 
-### Functions
-def restart_game():
+def restart_game(driver):
     '''
     releases keypresses and restarts game
     '''
@@ -35,7 +24,7 @@ def restart_game():
     pass
 
 
-def GeneChain(genome):
+def GeneChain(genome,driver):
     '''
     Input: genome:listof elem [action,argument]
             - 'action': list of instructions as character
@@ -55,7 +44,7 @@ def GeneChain(genome):
     return chain
 
 
-def read_score(Individual_ID,trial):
+def read_score(Individual_ID,trial,game_canvas,Pop_ID):
     '''
     Reads the score (distance in M) of an Individual run using tesseract OCR.
     Saves image to data/img/directory for inspection.
@@ -64,14 +53,14 @@ def read_score(Individual_ID,trial):
     #global game_canvas
     #game_canvas.screenshot(f'./data/img/{Individual_ID}_{trial}.png') # write to data/img
 
-    game_canvas.screenshot(f'./data/img/tmp.png') # write to data/img
+    game_canvas.screenshot(f'./data/img/{Pop_ID}tmp.png') # write to data/img
 
     # IMPROVE: not read and write image but access from ram, ie:
     # snap = game_canvas.screenshot_as_png 
 
     # Preprocess the image crop:  (l,t,r,b) 
     #img = Image.open(f'./data/img/{Individual_ID}_{trial}.png')
-    img = Image.open(f'./data/img/tmp.png')
+    img = Image.open(f'./data/img/{Pop_ID}tmp.png')
     img_bw = ImageOps.grayscale(img)
     img_in = ImageOps.invert(img_bw)
 
@@ -81,7 +70,7 @@ def read_score(Individual_ID,trial):
         # extract & store score as float
         score = pytesseract.image_to_string(img_in.crop((230, 20, 420, 55)),config=tess_conf)
         score = float(score.replace(' metres\n',''))
-
+        if score <= 0.4: score = 0 # don't just stand there
     except:
         print("score couldn't be read, setting 0")
         score = 0
@@ -89,7 +78,8 @@ def read_score(Individual_ID,trial):
     try:
         participant = pytesseract.image_to_string(img_in.crop((200, 110, 430, 140)),config=tess_conf)
         if participant == 'PARTICIPANT\n':
-            score -= 1.0
+            score = 0 # harsh penalty for falling
+            #score -= 1.0
     except:
         print("could not determine if fell down")
 
@@ -97,27 +87,31 @@ def read_score(Individual_ID,trial):
 
 
 
-def Trials(Population, Pop_ID, Gen_ID, n_trials=3, game_duration=3,write=False):
-
-    fitness = []
-    # Iterate of Population:
+def Trials(Population, Pop_ID, Gen_ID,driver,game_canvas,n_trials=3, game_duration=3,write=False):
+    # Iterate over Population:
+    # global N_generations
     for i,Genome in enumerate(Population):
         
+        if not i: print('\n\n'); fitness = [0] # edge case for printing--:
+        print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Fitness: max {max(fitness):.2f}, avg {mean(fitness):.2f} \x1B[B\n',end='\r')
         # concatenate ID of individual 
         Individual_ID = f'{Pop_ID}_{Gen_ID}_{i}'
         score = [] # list to store meters 
         # run n number of trials!
         for trial in range(n_trials):
-            restart_game()
+            restart_game(driver)
             # Perform the steps , ie gene expression -> pheno 
-            GeneChain(Genome).perform()
+            GeneChain(Genome,driver).perform()
             # Pause to limit trial duration
             sleep(game_duration)
             # read the score from game canvas and append to score list
-            score.append(read_score(Individual_ID,trial))
-            # next trial
-         
+            s = read_score(Individual_ID,trial,game_canvas,Pop_ID)
+            print(f'\x1B[A N: {i}/{len(Population)-1}; trial {trial}/{n_trials-1};  score {s:.1f}   \n',end='\r')
+            score.append(s)
+            # next trial -->
+
         # append maximal reached score to fitness list
+        if not i: fitness = [] 
         fitness.append(max(score))
 
         # parse data to write to logging csv column
@@ -128,11 +122,11 @@ def Trials(Population, Pop_ID, Gen_ID, n_trials=3, game_duration=3,write=False):
         
         if write:
             # write to csv file
-            with open('./data/fitness.csv','a',newline='') as file:
+            with open(f'./data/fitness_{Pop_ID}.csv','a',newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(data)
 
-        print(data) # print to stdout
+        #print(data) # print to stdout
 
     return fitness
 

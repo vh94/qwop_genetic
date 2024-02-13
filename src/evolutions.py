@@ -3,22 +3,19 @@
 # creation of genomes, populations, evaluation, recombination, mutation, selection
 
 from itertools import combinations
-# from os import sendfile
 import scipy.stats as stats
-from random import sample, random, uniform
-#from selenium.webdriver.common.action_chains import ActionChains
-
+import numpy as np
+from random import sample, random, uniform, seed
+from config import *
 keys = ['q','w','o','p'] # possible keys
 # combs = chords / single keys
 combs = [''.join(i) for n in range(1,5) for i in combinations(keys,n)]
 
 
 def create_genome(n_genes):
-    
     genome = [None]*n_genes
-
+    
     for gene in range(n_genes):
-
         action = ''.join(sample(('key_up','key_down','pause'),1))
         
         if action == 'pause':
@@ -26,14 +23,16 @@ def create_genome(n_genes):
         else:
         	argument = ''.join(sample(combs,1)) # select keycomb
 		
-        genome[gene] = [action,argument]
-   
+    
+        genome[gene] = [ action, argument ]
+
     return genome
 
 def create_population(N,n_genes):
     return [create_genome(n_genes) for i in range(N)] 
 
 
+### Parent selection 
 
 def select_top_N(population,fitness,N):
     # rank fitness list
@@ -78,8 +77,21 @@ def levenshtein_distance(genome1, genome2):
 
     return dist[l1-1][l2-1]
 
+def min_distances(Genomes):
+
+    # get similarty scores lievenstein distace between them
+
+    distsMat = np.empty((len(Genomes),len(Genomes)))
+    distsMat[np.tril_indices_from(distsMat)] = np.inf
+
+    for i,genome in enumerate(Genomes):
+        distsMat[i,i:] = [levenshtein_distance(genome,g2) for g2 in Genomes[i:]]
+        
+    
+    return np.argmin(distsMat,axis=1)
 
 
+### Recombination
 
 def meiose(genome):
     size = len(genome)
