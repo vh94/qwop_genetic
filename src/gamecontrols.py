@@ -32,15 +32,18 @@ def GeneChain(genome,driver):
     Output: chained function constructor arg object of type selenium.ActionChains
     '''
     chain = ActionChains(driver)
-    for gene in genome:
-        fun = getattr(type(chain),gene[0])
-        # note: key_down and key_up only accept single keys as input
-        if gene[0] != 'pause':
-            for key in gene[1]:
-                chain = fun(chain,key)
-        else:
-            chain = fun(chain,gene[1])
 
+    down = getattr(type(chain),"key_down")
+    up = getattr(type(chain),"key_up")
+    pause = getattr(type(chain),"pause")
+    
+    for gene in genome:
+        # note: key_down and key_up only accept single keys as input
+        for key in gene[0]: chain = down(chain,key)
+        # pause
+        chain = pause(chain,gene[1])
+        # key up 
+        for key in gene[0]: chain = up(chain,key)
     return chain
 
 
@@ -87,37 +90,39 @@ def read_score(Individual_ID,trial,game_canvas,Pop_ID):
 
 
 
-def Trials(Population, Pop_ID, Gen_ID,driver,game_canvas,n_trials,game_duration,N_generations,write=False):
+def Trials(Population, Pop_ID, Gen_ID, driver, game_canvas, n_trials, N_generations, write=True):
     # Iterate over Population:
-    #global N_generations
     
+    Score = [] # score for pop
+
     for i,Genome in enumerate(Population):
         
-        if not i: print('\n\n'); fitness = [0] # edge case for printing--:
-        print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Fitness: max {max(fitness):.2f}, avg {mean(fitness):.2f} \x1B[B\n',end='\r')
+        score = [] # score for individual
+
+        if not i: print('\n\n'); Score = [0] # edge case for printing-- score = 0 for max / mean:
+        print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Score: max {max(Score):.2f}, avg {mean(Score):.2f} \x1B[B\n',end='\r')
         # concatenate ID of individual 
         Individual_ID = f'{Pop_ID}_{Gen_ID}_{i}'
-        score = [] # list to store meters 
+        
         # run n number of trials!
         for trial in range(n_trials):
             restart_game(driver)
             # Perform the steps , ie gene expression -> pheno 
             GeneChain(Genome,driver).perform()
-            # Pause to limit trial duration
-            sleep(game_duration)
+            # Pause 
+            sleep(1.5)
             # read the score from game canvas and append to score list
             s = read_score(Individual_ID,trial,game_canvas,Pop_ID)
             print(f'\x1B[A N: {i}/{len(Population)-1}; trial {trial}/{n_trials-1};  score {s:.1f}   \n',end='\r')
             score.append(s)
             # next trial -->
 
-        # append maximal reached score to fitness list
-        if not i: fitness = [] 
-        fitness.append(max(score))
+        # append maximal reached score to Score list
+        if not i: Score = [] 
+        Score.append(max(score))
 
         # parse data to write to logging csv column
         data = [datetime.now().strftime('%m-%d-%H-%M-%S'),
-                game_duration,
                 Individual_ID]\
                 + [ round(f(score),5) for f in [min,mean,median,max]]
         
@@ -127,7 +132,6 @@ def Trials(Population, Pop_ID, Gen_ID,driver,game_canvas,n_trials,game_duration,
                 writer = csv.writer(file)
                 writer.writerow(data)
 
-        #print(data) # print to stdout
 
-    return fitness
+    return Score
 

@@ -17,32 +17,30 @@ def main(driver,game_canvas, args):
     N_generations = args.gen
     Pop_id = args.id
     n_trials = args.trials
-    game_duration = args.duration
     top_N = args.top
     seed_nr = args.seed
-    # Initial Random population
-    seed(seed_nr)
     
 
+    # Initial Random population
+    seed(seed_nr)
     Population = create_population(Popsize,N_genes)
-
 
     
     for Generation in range(N_generations):
-        # run Trials
-        fitness = Trials(
+
+        # run Trials Parents: μ
+        fitness_μ = Trials(
             Population,
             Pop_ID = Pop_id,
             Gen_ID = Generation,
             driver= driver,
             game_canvas= game_canvas,
             n_trials = n_trials,
-            game_duration = game_duration, #min(80, (game_duration + 0.5*Generation)),
             N_generations= N_generations,
             write = True)
 
-        ###  Selection
-        TopN = select_top_N(Population, fitness, top_N )
+        ###  Selection Top N Genomes based rank.
+        TopN = select_top_N(Population, fitness_μ, top_N)
         
         # New Pop = mutation of timings of top genomes .. 
         Population = [mutate_genome_pauses(genome) for genome in TopN]
@@ -68,7 +66,6 @@ if __name__ == '__main__':
     parser.add_argument('--gen', type=int, default=10, help='Number of generations')
     parser.add_argument('--id', type=str, default='A', help='Population ID')
     parser.add_argument('--trials', type=int, default=2, help='Number of trials')
-    parser.add_argument('--duration', type=float, default=1.5, help='Game duration')
     parser.add_argument('--top', type=int, default=10, help='Top N')
     parser.add_argument('--seed', type=int, default=1994, help='Seed number')
 

@@ -6,50 +6,44 @@ from itertools import combinations
 import scipy.stats as stats
 import numpy as np
 from random import sample, random, uniform, seed
-from config import *
-keys = ['q','w','o','p'] # possible keys
-# combs = chords / single keys
-combs = [''.join(i) for n in range(1,5) for i in combinations(keys,n)]
 
 
-def create_genome_old(n_genes):
-    genome = [None]*n_genes
-    
-    for gene in range(n_genes):
-        action = ''.join(sample(('key_up','key_down','pause'),1))
-        
-        if action == 'pause':
-            argument = round(random(),5) # pause length [0,1] sec
-        else:
-        	argument = ''.join(sample(combs,1)) # select keycomb
-		
-    
-        genome[gene] = [ action, argument ]
-
-    return genome
 
 
 def create_genome(n_genes):
+    '''
+    param: n_genes: integer number of genes 
 
-    genome = []
+    out: genome: list of genes with [key, duration] pairs
+    '''
+
+    keys = ['q','w','o','p'] # possible keys
+    combs = [''.join(i) for n in range(1,5) for i in combinations(keys,n)]
+    
+    genome = [None] * n_genes
 
     for gene in range(n_genes):
         
         keys = ''.join(sample(combs,1)) 
         duration = round(random()*2,5)
         
-        genome += [['key_down',keys]]
-        genome += [['pause', duration]]
-        genome += [['key_up', keys]]
+        genome[gene] = [keys, duration]
 
     return genome
 
 
 def create_population(N,n_genes):
-    return [create_genome(n_genes) for i in range(N)] 
+    '''
+    param: N: integer numper of individuals
+    
+    param: n_genes: integer number of genes 
+    out: Population (Genepool)
+    '''
+    return [create_genome(n_genes) for _ in range(N)] 
 
 
 ### Parent selection 
+## Rank based:
 
 def select_top_N(population,fitness,N):
     # rank fitness list
@@ -63,17 +57,23 @@ def select_top_N(population,fitness,N):
 # don't
 
 
-def levenshtein_distance(genome1, genome2):
-    # pull actions
-    actions1 = [_[0] for _ in genome1]
-    actions2 = [_[0] for _ in genome2]
+def levenshtein_distance(genome1, genome2, concat = True):
 
-    l1, l2 = len(actions1)+1, len(actions2)+1
+    # pull actions
+    keys1 = [_[0] for _ in genome1]
+    keys2 = [_[0] for _ in genome2]
+    
+    if concat:
+        keys1 = ''.join(keys1)
+        keys2 = ''.join(keys2)
+
+
+    l1, l2 = len(keys1)+1, len(keys2)+1
     
     # Create a 2D matrix to store the distances
     dist = [[0] * (l2) for _ in range(l1)]
 
-    #  dist matrix first row / colum = strings
+    #  dist matrix first row / colum = strings / lists
     for i in range(l1):
         dist[i][0] = i
     for j in range(l2):
@@ -82,7 +82,7 @@ def levenshtein_distance(genome1, genome2):
     # penalties
     for i in range(1, l1):
         for j in range(1, l2):
-            if actions1[i - 1] == actions2[j - 1]:
+            if keys1[i - 1] == keys2[j - 1]:
                 cost = 0
             else:
                 cost = 1
@@ -94,7 +94,7 @@ def levenshtein_distance(genome1, genome2):
 
     return dist[l1-1][l2-1]
 
-def min_distances(Genomes):
+def min_distances(Genomes, concat = True):
 
     # get similarty scores lievenstein distace between them
 
@@ -102,7 +102,7 @@ def min_distances(Genomes):
     distsMat[np.tril_indices_from(distsMat)] = np.inf
 
     for i,genome in enumerate(Genomes):
-        distsMat[i,i:] = [levenshtein_distance(genome,g2) for g2 in Genomes[i:]]
+        distsMat[i,i:] = [levenshtein_distance(genome,g2, concat) for g2 in Genomes[i:]]
         
     
     return np.argmin(distsMat,axis=1)
@@ -142,14 +142,20 @@ def mutate_genome(genome,prob):
 
 
 
-def mutate_genome_pauses(genome):
-    for gene in genome:
+def mutate_genome_pauses(genome, time = .1):
+   
+    for gene in genome: 
+        
+        gene[1] = max(0,gene[1] + round(uniform(-time,time),5)) 
 
-        if gene[1] == 'pause':
-            
-            gene[1] = max(0,gene[1] + round(uniform(-.5,.5),5)) 
-
-    
     return genome
+
+def σ(scores):
+    '''
+    param: scores: vector of float score values of trial
+    return: sigma scaled fitness
+    '''
+    scaled = np.maximum(scores - (np.mean(scores) - 2 * np.std(scores)),0)
+    return scaled.tolist()
 
 
