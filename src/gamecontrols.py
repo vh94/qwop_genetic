@@ -1,15 +1,28 @@
 # This file contains game control fucntions:
 import pytesseract
 from PIL import Image, ImageOps
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 from datetime import datetime
 import csv
 from statistics import mean, median
-from config import *
+
+## # Setup tesseract OCR engine
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+tess_conf = '--psm 7 -c page_separator=''' 
+# Spawn Firefox WebDriver 
+driver = webdriver.Firefox()
+# access QWOP url:
+driver.get("http://www.foddy.net/Athletics.html"); sleep(3)
+# target game canvas
+game_canvas = driver.find_element(By.CSS_SELECTOR,'#window1')
+
+
 ############## Functions ##################
 
-def restart_game(driver):
+def restart_game():
     '''
     releases keypresses and restarts game
     '''
@@ -24,7 +37,7 @@ def restart_game(driver):
     pass
 
 
-def GeneChain(genome,driver):
+def GeneChain(genome):
     '''
     Input: genome:listof elem [action,argument]
             - 'action': list of instructions as character
@@ -47,13 +60,12 @@ def GeneChain(genome,driver):
     return chain
 
 
-def read_score(Individual_ID,trial,game_canvas,Pop_ID):
+def read_score(Individual_ID,trial,Pop_ID):
     '''
     Reads the score (distance in M) of an Individual run using tesseract OCR.
     Saves image to data/img/directory for inspection.
     returns the score as a float.
     '''
-    #global game_canvas
     #game_canvas.screenshot(f'./data/img/{Individual_ID}_{trial}.png') # write to data/img
 
     game_canvas.screenshot(f'./data/img/{Pop_ID}tmp.png') # write to data/img
@@ -90,9 +102,9 @@ def read_score(Individual_ID,trial,game_canvas,Pop_ID):
 
 
 
-def Trials(Population, Pop_ID, Gen_ID, driver, game_canvas, n_trials, N_generations, write=True):
+def Trials(Population, Pop_ID, Gen_ID,  n_trials, N_generations, write=True):
     # Iterate over Population:
-    
+    avg_genome_size = mean([len(genome) for genome in Population])
     Score = [] # score for pop
 
     for i,Genome in enumerate(Population):
@@ -100,19 +112,19 @@ def Trials(Population, Pop_ID, Gen_ID, driver, game_canvas, n_trials, N_generati
         score = [] # score for individual
 
         if not i: print('\n\n'); Score = [0] # edge case for printing-- score = 0 for max / mean:
-        print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Score: max {max(Score):.2f}, avg {mean(Score):.2f} \x1B[B\n',end='\r')
+        print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Score: max {max(Score):.2f}, avg {mean(Score):.2f}; NGenes Ø:{avg_genome_size} \x1B[B\n',end='\r')
         # concatenate ID of individual 
         Individual_ID = f'{Pop_ID}_{Gen_ID}_{i}'
         
         # run n number of trials!
         for trial in range(n_trials):
-            restart_game(driver)
+            restart_game()
             # Perform the steps , ie gene expression -> pheno 
-            GeneChain(Genome,driver).perform()
+            GeneChain(Genome).perform()
             # Pause 
             sleep(1.5)
             # read the score from game canvas and append to score list
-            s = read_score(Individual_ID,trial,game_canvas,Pop_ID)
+            s = read_score(Individual_ID,trial,Pop_ID)
             print(f'\x1B[A N: {i}/{len(Population)-1}; trial {trial}/{n_trials-1};  score {s:.1f}   \n',end='\r')
             score.append(s)
             # next trial -->
@@ -134,4 +146,5 @@ def Trials(Population, Pop_ID, Gen_ID, driver, game_canvas, n_trials, N_generati
 
 
     return Score
+
 

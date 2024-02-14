@@ -50,7 +50,8 @@ def select_top_N(population,fitness,N):
     rank = stats.rankdata(fitness)
     # zip , sort based on rank and return 0 index
     pop_ranked = [ _[0] for _ in  sorted(list(zip(population,rank)),key = lambda x: -x[1])]
-    return pop_ranked[:N] 
+    fit_ranked = [ _[0] for _ in  sorted(list(zip(fitness,rank)),key = lambda x: -x[1])]
+    return fit_ranked[:N], pop_ranked[:N] 
 
 # I use Leventhein here as an distance metric since it incorporates 
 # the order of the actions; set based dinstances ie Jaccard/manhattan/humming
