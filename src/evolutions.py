@@ -25,7 +25,7 @@ def create_genome(n_genes):
     for gene in range(n_genes):
         
         keys = ''.join(sample(combs,1)) 
-        duration = round(random()*2,5)
+        duration = round(random()*1,5)
         
         genome[gene] = [keys, duration]
 

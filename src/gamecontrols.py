@@ -4,7 +4,7 @@ from PIL import Image, ImageOps
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
-from time import sleep
+from time import sleep, clock
 from datetime import datetime
 import csv
 from statistics import mean, median
@@ -110,6 +110,7 @@ def Trials(Population, Pop_ID, Gen_ID,  n_trials, N_generations, write=True):
     for i,Genome in enumerate(Population):
         
         score = [] # score for individual
+        times = [] # store game durations
 
         if not i: print('\n\n'); Score = [0] # edge case for printing-- score = 0 for max / mean:
         print(f'\x1B[2A Gen: {Gen_ID}/{N_generations - 1}; Score: max {max(Score):.2f}, avg {mean(Score):.2f}; NGenes Ø:{avg_genome_size} \x1B[B\n',end='\r')
@@ -119,23 +120,27 @@ def Trials(Population, Pop_ID, Gen_ID,  n_trials, N_generations, write=True):
         # run n number of trials!
         for trial in range(n_trials):
             restart_game()
+
+            t0 = clock()
             # Perform the steps , ie gene expression -> pheno 
             GeneChain(Genome).perform()
             # Pause 
             sleep(1.5)
+            dt = clock() - t0
             # read the score from game canvas and append to score list
             s = read_score(Individual_ID,trial,Pop_ID)
             print(f'\x1B[A N: {i}/{len(Population)-1}; trial {trial}/{n_trials-1};  score {s:.1f}   \n',end='\r')
             score.append(s)
+            times.append(dt)
             # next trial -->
 
         # append maximal reached score to Score list
         if not i: Score = [] 
         Score.append(max(score))
-
+        
         # parse data to write to logging csv column
         data = [datetime.now().strftime('%m-%d-%H-%M-%S'),
-                Individual_ID]\
+                Individual_ID, mean(times)]\
                 + [ round(f(score),5) for f in [min,mean,median,max]]
         
         if write:
