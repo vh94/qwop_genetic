@@ -4,7 +4,7 @@ from PIL import Image, ImageOps
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
-from time import sleep, clock
+from time import sleep, time
 from datetime import datetime
 import csv
 from statistics import mean, median
@@ -121,12 +121,12 @@ def Trials(Population, Pop_ID, Gen_ID,  n_trials, N_generations, write=True):
         for trial in range(n_trials):
             restart_game()
 
-            t0 = clock()
+            t0 = time()
             # Perform the steps , ie gene expression -> pheno 
             GeneChain(Genome).perform()
             # Pause 
             sleep(1.5)
-            dt = clock() - t0
+            dt = time() - t0
             # read the score from game canvas and append to score list
             s = read_score(Individual_ID,trial,Pop_ID)
             print(f'\x1B[A N: {i}/{len(Population)-1}; trial {trial}/{n_trials-1};  score {s:.1f}   \n',end='\r')
